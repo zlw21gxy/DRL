@@ -34,7 +34,7 @@ LANE_KEEP = build_scenario(
     end=40,
     vehicles=0,
     pedestrians=0,
-    max_steps=2000,
+    max_steps=1000,
     weathers=[0])
 
 # Scenarios from the CoRL2017 paper
@@ -110,7 +110,7 @@ TOWN2_STRAIGHT_DYNAMIC = [
 ]
 
 TOWN2_ONE_CURVE = [
-    build_scenario("Town02", start, end, 0, 0, 600, TRAIN_WEATHERS)
+    build_scenario("Town02", start, end, 0, 0, 1000, TRAIN_WEATHERS)
     for (start, end) in POSES_TOWN2_ONE_CURVE
 ]
 

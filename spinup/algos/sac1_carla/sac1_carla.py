@@ -51,8 +51,8 @@ Soft Actor-Critic
 
 """
 def sac1_carla(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
-        steps_per_epoch=5000, epochs=100, replay_size=int(1e5), gamma=0.99,
-        polyak=0.995, lr=1e-3, alpha=0.2, batch_size=100, start_steps=10000,
+        steps_per_epoch=3000, epochs=100, replay_size=int(2e5), gamma=0.99,
+        polyak=0.995, lr=1e-3, alpha=0.2, batch_size=100, start_steps=9000,
         max_ep_len=1000, logger_kwargs=dict(), save_freq=1):
     """
 
@@ -177,7 +177,7 @@ def sac1_carla(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), see
     if alpha == 'auto':
         target_entropy = (-np.prod(env.action_space.shape))
 
-        log_alpha = tf.get_variable( 'log_alpha', dtype=tf.float32, initializer=0.0)
+        log_alpha = tf.get_variable('log_alpha', dtype=tf.float32, initializer=0.0)
         alpha = tf.exp(log_alpha)
 
         alpha_loss = tf.reduce_mean(-log_alpha * tf.stop_gradient(logp_pi + target_entropy))
@@ -245,7 +245,7 @@ def sac1_carla(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), see
         act_op = mu if deterministic else pi
         return sess.run(act_op, feed_dict={x_ph: o[np.newaxis,...]})[0]
 
-    def test_agent(n=3):
+    def test_agent(n=1):
         global sess, mu, pi, q1, q2, q1_pi, q2_pi
         for j in range(n):
             o, r, d, ep_ret, ep_len = test_env.reset(), 0, False, 0, 0
@@ -270,8 +270,18 @@ def sac1_carla(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), see
         """
         if t > start_steps:
             a = get_action(o)
+            #print('shit')
         else:
-            a = env.action_space.sample()
+            if np.random.randn() > 0.1:
+                b = (1 + np.random.random(1)) * 0.5
+                #b = np.array([1])
+            else:
+                b = -1 + 2 * np.random.random(1)
+            #b = np.array([1])
+            #c = np.array([0])
+            c = -1 + 2*np.random.random(1)
+            a = np.stack((b, c))
+            a = a.flatten()
 
         # Step the env
         o2, r, d, _ = env.step(a)
@@ -324,17 +334,18 @@ def sac1_carla(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), see
                 logger.save_state({'env': env}, None)
 
             # Test the performance of the deterministic version of the agent.
-            test_agent()
+
+            # test_agent()
+            # logger.log_tabular('TestEpLen', average_only=True)
+            # logger.log_tabular('TestEpRet', with_min_and_max=True)
 
             # logger.store(): store the data; logger.log_tabular(): log the data; logger.dump_tabular(): write the data
             # Log info about epoch
             logger.log_tabular('Epoch', epoch)
             logger.log_tabular('EpRet', with_min_and_max=True)
-            logger.log_tabular('TestEpRet', with_min_and_max=True)
             logger.log_tabular('EpLen', average_only=True)
-            logger.log_tabular('TestEpLen', average_only=True)
             logger.log_tabular('TotalEnvInteracts', t)
-            logger.log_tabular('Alpha',average_only=True)
+            logger.log_tabular('Alpha', average_only=True)
             logger.log_tabular('Q1Vals', with_min_and_max=True) 
             logger.log_tabular('Q2Vals', with_min_and_max=True) 
             # logger.log_tabular('VVals', with_min_and_max=True)
@@ -354,10 +365,10 @@ if __name__ == '__main__':
     parser.add_argument('--l', type=int, default=1)
     parser.add_argument('--gamma', type=float, default=0.99)
     parser.add_argument('--seed', '-s', type=int, default=0)
-    parser.add_argument('--epochs', type=int, default=1000)
-    parser.add_argument('--steps_per_epoch', type=int, default=5000)
+    parser.add_argument('--epochs', type=int, default=2000)
+    parser.add_argument('--steps_per_epoch', type=int, default=3000)
     parser.add_argument('--alpha', default=0.2, help="alpha can be either 'auto' or float(e.g:0.2).")
-    parser.add_argument('--exp_name', type=str, default='sac1_carla_400x300_0.2_h0')
+    parser.add_argument('--exp_name', type=str, default='sac1_carla_400*256_auto')
     args = parser.parse_args()
 
     from spinup.utils.run_utils import setup_logger_kwargs
@@ -368,6 +379,6 @@ if __name__ == '__main__':
     env_fn = make_carla if args.env=='Carla-v0' else lambda : gym.make(args.env)
 
     sac1_carla(env_fn, actor_critic=core.mlp_actor_critic,
-        ac_kwargs=dict(hidden_sizes=[400,300]),
+        ac_kwargs=dict(hidden_sizes=[400, 300]),
         gamma=args.gamma, seed=args.seed, epochs=args.epochs, steps_per_epoch=args.steps_per_epoch, alpha=args.alpha,
         logger_kwargs=logger_kwargs)

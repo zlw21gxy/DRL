@@ -5,7 +5,7 @@ from gym.spaces import Box, Discrete
 EPS = 1e-8
 
 def placeholder(dim=None):
-    return tf.placeholder(dtype=tf.float32, shape=(None,dim) if dim else (None,))
+    return tf.placeholder(dtype=tf.float32, shape=(None, dim) if dim else (None,))
 
 def placeholders(*args):
     return [placeholder(dim) for dim in args]
@@ -30,14 +30,59 @@ def mlp(x, hidden_sizes=(32,), activation=tf.tanh, output_activation=None):
         x = tf.layers.dense(x, units=h, activation=activation)
     return tf.layers.dense(x, units=hidden_sizes[-1], activation=output_activation)
 
+# def cnn_layer(x):
+#     x = tf.reshape(x, [-1, 80, 80, 6])
+#     x = tf.nn.relu(tf.layers.conv2d(x, 32, [4, 4], strides=(2, 2), padding='SAME'))
+#     #x = tf.nn.max_pooling(x)
+#     x = tf.nn.relu(tf.layers.conv2d(x, 64, [4, 4], strides=(2, 2), padding='SAME'))
+#     x = tf.nn.relu(tf.layers.conv2d(x, 128, [4, 4], strides=(2, 2), padding='SAME'))
+#     # x = tf.nn.relu(tf.layers.conv2d(x, 128, [4, 4], strides=(2, 2), padding='SAME'))
+#     # x = tf.reshape(x, [-1, 3200])
+#     x = tf.layers.flatten(x)
+#     x = tf.layers.dense(x, 256)
+#     return tf.layers.dense(x, 64)
+
+
 def cnn_layer(x):
-    x = tf.reshape(x, [-1, 80, 80, 6])
-    x = tf.nn.relu(tf.layers.conv2d(x, 16, [4, 4], strides=(2, 2), padding='SAME'))
-    x = tf.nn.relu(tf.layers.conv2d(x, 32, [4, 4], strides=(2, 2), padding='SAME'))
-    x = tf.nn.relu(tf.layers.conv2d(x, 64, [4, 4], strides=(2, 2), padding='SAME'))
-    x = tf.nn.relu(tf.layers.conv2d(x, 128, [4, 4], strides=(2, 2), padding='SAME'))
-    x = tf.reshape(x, [-1, 3200])
-    return tf.layers.dense(x, 200)
+    # Input Layer
+    input_layer = tf.reshape(x, [-1, 100, 100, 2])
+
+    # Conv Layer #1
+    conv1 = tf.layers.conv2d(
+        inputs=input_layer,
+        filters=32,
+        kernel_size=[3, 3],
+        padding="same",
+        activation=tf.nn.relu)
+    pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[2, 2], strides=2)
+
+    # Conv Layer #2
+    conv2 = tf.layers.conv2d(
+        inputs=pool1,
+        filters=64,
+        kernel_size=[3, 3],
+        strides=(2, 2),
+        padding="same",
+        activation=tf.nn.relu)
+    pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[2, 2], strides=2)
+
+    # Conv Layer #3
+    conv3 = tf.layers.conv2d(
+        inputs=pool2,
+        filters=128,
+        kernel_size=[3, 3],
+        strides=(1, 1),
+        padding="same",
+        activation=tf.nn.relu)
+    pool3 = tf.layers.max_pooling2d(inputs=conv3, pool_size=[2, 2], strides=2)
+    # Dense Layer
+
+    x = tf.layers.flatten(pool3)
+    x = tf.layers.dense(x, 512, activation=tf.nn.relu)
+    return tf.layers.dense(x, 56)
+
+
+
 
 def get_vars(scope):
     return [x for x in tf.global_variables() if scope in x.name]
@@ -106,7 +151,7 @@ def apply_squashing_func(mu, pi, logp_pi):
 """
 Actor-Critics
 """
-def mlp_actor_critic(x, a, hidden_sizes=(400,300), activation=tf.nn.relu, 
+def mlp_actor_critic(x, a, hidden_sizes, activation=tf.nn.relu,
                      output_activation=None, policy=mlp_gaussian_policy, action_space=None):
 
     # cnn_layer
@@ -127,11 +172,11 @@ def mlp_actor_critic(x, a, hidden_sizes=(400,300), activation=tf.nn.relu,
     # tf.squeeze( shape(?,1), axis=1 ) = shape(?,)
     vf_mlp = lambda x : tf.squeeze(mlp(x, list(hidden_sizes)+[1], activation, None), axis=1)
     with tf.variable_scope('q1'):
-        q1 = vf_mlp(tf.concat([x,a], axis=-1))
+        q1 = vf_mlp(tf.concat([x, a], axis=-1))
     with tf.variable_scope('q1', reuse=True):
-        q1_pi = vf_mlp(tf.concat([x,pi], axis=-1))
+        q1_pi = vf_mlp(tf.concat([x, pi], axis=-1))
     with tf.variable_scope('q2'):
-        q2 = vf_mlp(tf.concat([x,a], axis=-1))
+        q2 = vf_mlp(tf.concat([x, a], axis=-1))
     with tf.variable_scope('q2', reuse=True):
         q2_pi = vf_mlp(tf.concat([x,pi], axis=-1))
 

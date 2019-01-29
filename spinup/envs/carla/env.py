@@ -34,14 +34,14 @@ if CARLA_OUT_PATH and not os.path.exists(CARLA_OUT_PATH):
 
 # Set this to the path of your Carla binary
 SERVER_BINARY = os.environ.get("CARLA_SERVER",
-                               os.path.expanduser("~/CARLA_0.7.0/CarlaUE4.sh"))
+                               os.path.expanduser("/home/gu/Documents/carla/CarlaUE4.sh"))
 
 assert os.path.exists(SERVER_BINARY)
 if "CARLA_PY_PATH" in os.environ:
     sys.path.append(os.path.expanduser(os.environ["CARLA_PY_PATH"]))
 else:
     # TODO(ekl) switch this to the binary path once the planner is in master
-    sys.path.append(os.path.expanduser("~/carla/PythonClient/"))
+    sys.path.append(os.path.expanduser("/home/gu/Documents/carla/PythonClient/"))
 
 try:
     from carla.client import CarlaClient
@@ -83,17 +83,17 @@ ENV_CONFIG = {
     "convert_images_to_video": False,  # convert log_images to videos. when "verbose" is True.
     "verbose": False,    # print measurement information; write out measurement json file.
 
-    "enable_planner": True,
+    "enable_planner": False,
     "framestack": 2,  # note: only [1, 2] currently supported
     "early_terminate_on_collision": True,
-    "reward_function": "custom",
-    "render_x_res": 800,
-    "render_y_res": 600,
-    "x_res": 80,  # cv2.resize()
-    "y_res": 80,  # cv2.resize()
+    "reward_function": "lane_keep",
+    "render_x_res": 160,
+    "render_y_res": 80,
+    "x_res": 100,  # cv2.resize()
+    "y_res": 100,  # cv2.resize()
     "server_map": "/Game/Maps/Town02",
-    "scenarios": [LANE_KEEP], # [DEFAULT_SCENARIO], # TOWN2_ONE_CURVE, #    TOWN2_ALL, #
-    "use_depth_camera": False,  # use depth instead of rgb.
+    "scenarios": [LANE_KEEP],  # [DEFAULT_SCENARIO], # TOWN2_ONE_CURVE, #    TOWN2_ALL, #
+    "use_depth_camera": True,  # use depth instead of rgb.
     "discrete_actions": False,
     "squash_action_logits": False,
 }
@@ -281,8 +281,9 @@ class CarlaEnv(gym.Env):
                                self.config["render_y_res"])
         # camera2.set_position(30, 0, 130)
         # camera2.set_position(0.3, 0.0, 1.3)
-        camera2.set_position(2.0, 0.0, 1.4)
-        camera2.set_rotation(0.0, 0.0, 0.0)
+        # camera2.set_position(2.0, 0.0, 1.4)
+        # camera2.set_rotation(0.0, 0.0, 0.0)
+        camera2.set_position(0.5, 0.0, 1.5)
 
         settings.add_sensor(camera2)
 
@@ -623,7 +624,7 @@ def compute_reward_lane_keep(env, prev, current):
     reward = 0.0
 
     # Speed reward, up 30.0 (km/h)
-    reward += np.clip(current["forward_speed"], 0.0, 30.0) / 10
+    reward += np.clip(current["forward_speed"], 0.0, 30.0) / 6
 
     # New collision damage
     new_damage = (
@@ -631,13 +632,13 @@ def compute_reward_lane_keep(env, prev, current):
         current["collision_other"] - prev["collision_vehicles"] -
         prev["collision_pedestrians"] - prev["collision_other"])
     if new_damage:
-        reward -= 100.0
+        reward -= 80.0
 
     # Sidewalk intersection
-    reward -= current["intersection_offroad"]
+    reward -= 0.8*current["intersection_offroad"]
 
     # Opposite lane intersection
-    reward -= current["intersection_otherlane"]
+    reward -= 0.8*current["intersection_otherlane"]
 
     return reward
 
