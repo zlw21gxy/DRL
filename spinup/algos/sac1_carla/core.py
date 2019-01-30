@@ -43,7 +43,7 @@ def mlp(x, hidden_sizes=(32,), activation=tf.tanh, output_activation=None):
 #     return tf.layers.dense(x, 64)
 
 
-def cnn_layer(x):
+def cnn_layer(x, is_train):
     # Input Layer
     input_layer = tf.reshape(x, [-1, 100, 100, 2])
 
@@ -54,7 +54,8 @@ def cnn_layer(x):
         kernel_size=[3, 3],
         padding="same",
         activation=tf.nn.relu)
-    pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[2, 2], strides=2)
+    conv1_bn = tf.layers.batch_normalization(conv1, training=is_train)
+    pool1 = tf.layers.max_pooling2d(inputs=conv1_bn, pool_size=[2, 2], strides=2)
 
     # Conv Layer #2
     conv2 = tf.layers.conv2d(
@@ -151,12 +152,12 @@ def apply_squashing_func(mu, pi, logp_pi):
 """
 Actor-Critics
 """
-def mlp_actor_critic(x, a, hidden_sizes, activation=tf.nn.relu,
+def mlp_actor_critic(is_train, x, a, hidden_sizes, activation=tf.nn.relu,
                      output_activation=None, policy=mlp_gaussian_policy, action_space=None):
 
     # cnn_layer
     with tf.variable_scope('cnn_layer'):
-        x = cnn_layer(x)
+        x = cnn_layer(x, is_train)
 
     # policy
     with tf.variable_scope('pi'):

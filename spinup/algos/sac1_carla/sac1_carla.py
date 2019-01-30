@@ -52,7 +52,7 @@ Soft Actor-Critic
 """
 def sac1_carla(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
         steps_per_epoch=3000, epochs=100, replay_size=int(2e5), gamma=0.99,
-        polyak=0.995, lr=1e-3, alpha=0.2, batch_size=100, start_steps=9000,
+        polyak=0.995, lr=1e-3, alpha=0.2, batch_size=100, start_steps=1000,
         max_ep_len=1000, logger_kwargs=dict(), save_freq=1):
     """
 
@@ -158,11 +158,11 @@ def sac1_carla(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), see
 
     # Main outputs from computation graph
     with tf.variable_scope('main'):
-        mu, pi, logp_pi, q1, q2, q1_pi, q2_pi = actor_critic(x_ph, a_ph, **ac_kwargs)
+        mu, pi, logp_pi, q1, q2, q1_pi, q2_pi = actor_critic(False, x_ph, a_ph, **ac_kwargs)
     
     # Target value network
     with tf.variable_scope('target'):
-        _, _, logp_pi_, _, _,q1_pi_, q2_pi_= actor_critic(x2_ph, a_ph, **ac_kwargs)
+        _, _, logp_pi_, _, _,q1_pi_, q2_pi_= actor_critic(False, x2_ph, a_ph, **ac_kwargs)
 
     # Experience buffer
     replay_buffer = ReplayBuffer(obs_dim=list(obs_dim), act_dim=list(act_dim), size=replay_size)
@@ -203,30 +203,36 @@ def sac1_carla(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), see
     cnn_params = get_vars('main/cnn_layer')
     # Policy train op 
     # (has to be separate from value train op, because q1_pi appears in pi_loss)
+    update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
     pi_optimizer = tf.train.AdamOptimizer(learning_rate=lr)
     pi_params = get_vars('main/pi')
-    train_pi_op = pi_optimizer.minimize(pi_loss, var_list = cnn_params + pi_params)
+    with tf.control_dependencies(update_ops):
+        train_pi_op = pi_optimizer.minimize(pi_loss, var_list = cnn_params + pi_params)
 
     # Value train op
     # (control dep of train_pi_op because sess.run otherwise evaluates in nondeterministic order)
     value_optimizer = tf.train.AdamOptimizer(learning_rate=lr)
     value_params = get_vars('main/q')
-    with tf.control_dependencies([train_pi_op]):
-        train_value_op = value_optimizer.minimize(value_loss, var_list = cnn_params + value_params)
+
+    with tf.control_dependencies(update_ops):
+        with tf.control_dependencies([train_pi_op]):
+                    train_value_op = value_optimizer.minimize(value_loss, var_list = cnn_params + value_params)
 
     # Polyak averaging for target variables
     # (control flow because sess.run otherwise evaluates in nondeterministic order)
-    with tf.control_dependencies([train_value_op]):
-        target_update = tf.group([tf.assign(v_targ, polyak*v_targ + (1-polyak)*v_main)
+    with tf.control_dependencies(update_ops):
+        with tf.control_dependencies([train_value_op]):
+            target_update = tf.group([tf.assign(v_targ, polyak*v_targ + (1-polyak)*v_main)
                                   for v_main, v_targ in zip(get_vars('main'), get_vars('target'))])
 
     # All ops to call during one training step
-    if isinstance(alpha, Number):
-        step_ops = [pi_loss, q1_loss, q2_loss, q1, q2, logp_pi, tf.identity(alpha),
-                train_pi_op, train_value_op, target_update]
-    else:
-        step_ops = [pi_loss, q1_loss, q2_loss, q1, q2, logp_pi, alpha,
-                train_pi_op, train_value_op, target_update, train_alpha_op]
+    with tf.control_dependencies(update_ops):
+        if isinstance(alpha, Number):
+            step_ops = [pi_loss, q1_loss, q2_loss, q1, q2, logp_pi, tf.identity(alpha),
+                    train_pi_op, train_value_op, target_update]
+        else:
+            step_ops = [pi_loss, q1_loss, q2_loss, q1, q2, logp_pi, alpha,
+                    train_pi_op, train_value_op, target_update, train_alpha_op]
 
 
     # Initializing targets to match main variables
@@ -270,11 +276,9 @@ def sac1_carla(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), see
         """
         if t > start_steps:
             a = get_action(o)
-            #print('shit')
         else:
             if np.random.randn() > 0.1:
                 b = (1 + np.random.random(1)) * 0.5
-                #b = np.array([1])
             else:
                 b = -1 + 2 * np.random.random(1)
             #b = np.array([1])
@@ -309,12 +313,16 @@ def sac1_carla(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), see
             """
             for j in range(ep_len):
                 batch = replay_buffer.sample_batch(batch_size)
+                is_train = tf.placeholder(tf.bool, name="is_train")
+                feed_dict = {}
+                feed_dict['is_train'] = True
                 feed_dict = {x_ph: batch['obs1'],
                              x2_ph: batch['obs2'],
                              a_ph: batch['acts'],
                              r_ph: batch['rews'],
                              d_ph: batch['done'],
                             }
+
                 # step_ops = [pi_loss, q1_loss, q2_loss, q1, q2, logp_pi, alpha, train_pi_op, train_value_op, target_update]
                 outs = sess.run(step_ops, feed_dict)
                 logger.store(LossPi=outs[0], LossQ1=outs[1], LossQ2=outs[2],
