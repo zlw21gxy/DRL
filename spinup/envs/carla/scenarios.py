@@ -33,8 +33,8 @@ LANE_KEEP = build_scenario(
     start=36,
     end=40,
     vehicles=0,
-    pedestrians=0,
-    max_steps=1000,
+    pedestrians=20,
+    max_steps=600,
     weathers=[0])
 
 # Scenarios from the CoRL2017 paper

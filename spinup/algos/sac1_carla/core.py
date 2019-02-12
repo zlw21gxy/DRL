@@ -65,6 +65,7 @@ def cnn_layer(x, is_train):
         strides=(2, 2),
         padding="same",
         activation=tf.nn.relu)
+    conv2 = tf.layers.batch_normalization(conv2, training=is_train)
     pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[2, 2], strides=2)
 
     # Conv Layer #3
@@ -75,12 +76,13 @@ def cnn_layer(x, is_train):
         strides=(1, 1),
         padding="same",
         activation=tf.nn.relu)
+    conv3 = tf.layers.batch_normalization(conv3, training=is_train)
     pool3 = tf.layers.max_pooling2d(inputs=conv3, pool_size=[2, 2], strides=2)
     # Dense Layer
 
     x = tf.layers.flatten(pool3)
-    x = tf.layers.dense(x, 512, activation=tf.nn.relu)
-    return tf.layers.dense(x, 56)
+    #x = tf.layers.dense(x, 512, activation=tf.nn.relu)
+    return tf.layers.dense(x, 512, activation=tf.nn.relu)
 
 
 
@@ -173,12 +175,12 @@ def mlp_actor_critic(is_train, x, a, hidden_sizes, activation=tf.nn.relu,
     # tf.squeeze( shape(?,1), axis=1 ) = shape(?,)
     vf_mlp = lambda x : tf.squeeze(mlp(x, list(hidden_sizes)+[1], activation, None), axis=1)
     with tf.variable_scope('q1'):
-        q1 = vf_mlp(tf.concat([x, a], axis=-1))
+        q1 = vf_mlp(tf.concat([x, a, a, a], axis=-1))
     with tf.variable_scope('q1', reuse=True):
-        q1_pi = vf_mlp(tf.concat([x, pi], axis=-1))
+        q1_pi = vf_mlp(tf.concat([x, pi, pi, pi], axis=-1))
     with tf.variable_scope('q2'):
-        q2 = vf_mlp(tf.concat([x, a], axis=-1))
+        q2 = vf_mlp(tf.concat([x, a, a, a], axis=-1))
     with tf.variable_scope('q2', reuse=True):
-        q2_pi = vf_mlp(tf.concat([x,pi], axis=-1))
+        q2_pi = vf_mlp(tf.concat([x, pi, pi, pi], axis=-1))
 
     return mu, pi, logp_pi, q1, q2, q1_pi, q2_pi

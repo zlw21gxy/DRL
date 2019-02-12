@@ -87,8 +87,8 @@ ENV_CONFIG = {
     "framestack": 2,  # note: only [1, 2] currently supported
     "early_terminate_on_collision": True,
     "reward_function": "lane_keep",
-    "render_x_res": 320,
-    "render_y_res": 160,
+    "render_x_res": 400,
+    "render_y_res": 200,
     "x_res": 100,  # cv2.resize()
     "y_res": 100,  # cv2.resize()
     "server_map": "/Game/Maps/Town02",
@@ -195,7 +195,7 @@ class CarlaEnv(gym.Env):
         self.server_process = subprocess.Popen(
             [
                 SERVER_BINARY, self.config["server_map"], "-windowed",
-                "-ResX=400", "-ResY=300", "-carla-server", "-benchmark -fps=10",   # "-benchmark -fps=10": to run the simulation at a fixed time-step of 0.1 seconds
+                "-ResX=800", "-ResY=600", "-carla-server", "-benchmark -fps=10",   # "-benchmark -fps=10": to run the simulation at a fixed time-step of 0.1 seconds
                 "-carla-world-port={}".format(self.server_port)
             ],
             preexec_fn=os.setsid,
@@ -271,8 +271,8 @@ class CarlaEnv(gym.Env):
             camera1.set_image_size(self.config["render_x_res"],
                                    self.config["render_y_res"])
             # camera1.set_position(30, 0, 130)
-            camera1.set_position(2.0, 0.0, 1.4)
-            camera1.set_rotation(0.0, 0.0, 0.0)
+            camera1.set_position(0.5, 0.0, 1.6)
+            # camera1.set_rotation(0.0, 0.0, 0.0)
 
             settings.add_sensor(camera1)
 
@@ -283,7 +283,7 @@ class CarlaEnv(gym.Env):
         # camera2.set_position(0.3, 0.0, 1.3)
         # camera2.set_position(2.0, 0.0, 1.4)
         # camera2.set_rotation(0.0, 0.0, 0.0)
-        camera2.set_position(0.5, 0.0, 1.5)
+        camera2.set_position(0.5, 0.0, 1.6)
 
         settings.add_sensor(camera2)
 
@@ -320,7 +320,9 @@ class CarlaEnv(gym.Env):
         if prev_image is None:
             prev_image = image
         if self.config["framestack"] == 2:
-            image = np.concatenate([prev_image, image], axis=2)
+            # image = np.concatenate([prev_image, image], axis=2)
+            '''this works when use depth camera and frame 2'''
+            image = np.concatenate([image, np.zeros_like(image)+py_measurements["forward_speed"]/30], axis=2)
         # obs = (image, COMMAND_ORDINAL[py_measurements["next_command"]], [
         #     py_measurements["forward_speed"],
         #     py_measurements["distance_to_goal"]

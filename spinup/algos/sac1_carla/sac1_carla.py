@@ -19,11 +19,11 @@ class ReplayBuffer:
     """
 
     def __init__(self, obs_dim, act_dim, size):
-        self.obs1_buf = np.zeros([size,]+obs_dim, dtype=np.float16)
-        self.obs2_buf = np.zeros([size,]+obs_dim, dtype=np.float16)
-        self.acts_buf = np.zeros([size,]+act_dim, dtype=np.float16)
-        self.rews_buf = np.zeros(size, dtype=np.float16)
-        self.done_buf = np.zeros(size, dtype=np.float16)
+        self.obs1_buf = np.zeros([size, ]+obs_dim, dtype=np.float32)
+        self.obs2_buf = np.zeros([size, ]+obs_dim, dtype=np.float32)
+        self.acts_buf = np.zeros([size, ]+act_dim, dtype=np.float32)
+        self.rews_buf = np.zeros(size, dtype=np.float32)
+        self.done_buf = np.zeros(size, dtype=np.float32)
         self.ptr, self.size, self.max_size = 0, 0, size
 
     def store(self, obs, act, rew, next_obs, done):
@@ -51,9 +51,9 @@ Soft Actor-Critic
 
 """
 def sac1_carla(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
-        steps_per_epoch=3000, epochs=100, replay_size=int(2e5), gamma=0.99,
-        polyak=0.995, lr=1e-3, alpha=0.2, batch_size=100, start_steps=1000,
-        max_ep_len=1000, logger_kwargs=dict(), save_freq=1):
+        steps_per_epoch=3000, epochs=100, replay_size=int(3e5), gamma=0.99,
+        polyak=0.995, lr=1e-3, alpha=0.2, batch_size=100, start_steps=9000,
+        max_ep_len=600, logger_kwargs=dict(), save_freq=1):
     """
 
     Args:
