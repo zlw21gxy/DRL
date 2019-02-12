@@ -3,9 +3,13 @@ import tensorflow as tf
 from numbers import Number
 import gym
 import time
-from spinup.algos.sac1_carla import core
-from spinup.algos.sac1_carla.core import get_vars
-from spinup.utils.logx import EpochLogger
+# from spinup.algos.sac1_carla import core
+# from spinup.algos.sac1_carla.core import get_vars
+# from .spinup.utils.logx import EpochLogger
+from logx import EpochLogger
+import core
+from core import get_vars
+#from .utils.logx import EpochLogger
 
 
 config = tf.ConfigProto()

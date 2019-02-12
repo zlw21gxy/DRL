@@ -82,7 +82,7 @@ def cnn_layer(x, is_train):
 
     x = tf.layers.flatten(pool3)
     #x = tf.layers.dense(x, 512, activation=tf.nn.relu)
-    return tf.layers.dense(x, 512, activation=tf.nn.relu)
+    return tf.layers.dense(x, 500, activation=tf.nn.relu)
 
 
 
