@@ -83,7 +83,7 @@ ENV_CONFIG = {
     "convert_images_to_video": False,  # convert log_images to videos. when "verbose" is True.
     "verbose": False,    # print measurement information; write out measurement json file.
 
-    "enable_planner": False,
+    "enable_planner": True,
     "framestack": 2,  # note: only [1, 2] currently supported
     "early_terminate_on_collision": True,
     "reward_function": "lane_keep",
@@ -325,7 +325,7 @@ class CarlaEnv(gym.Env):
         #     py_measurements["forward_speed"],
         #     py_measurements["distance_to_goal"]
         # ])
-        obs = image
+        obs = image    # can we encode speed into imagine
         self.last_obs = obs
         return obs
 
@@ -624,7 +624,7 @@ def compute_reward_lane_keep(env, prev, current):
     reward = 0.0
 
     # Speed reward, up 30.0 (km/h)
-    reward += np.clip(current["forward_speed"], 0.0, 30.0) / 6
+    reward += np.clip(current["forward_speed"], 0.0, 30.0) / 5
 
     # New collision damage
     new_damage = (
@@ -635,10 +635,10 @@ def compute_reward_lane_keep(env, prev, current):
         reward -= 80.0
 
     # Sidewalk intersection
-    reward -= 0.8*current["intersection_offroad"]
+    reward -= 0.2*current["intersection_offroad"]
 
     # Opposite lane intersection
-    reward -= 0.8*current["intersection_otherlane"]
+    reward -= 0.5*current["intersection_otherlane"]
 
     return reward
 
@@ -682,8 +682,8 @@ def sigmoid(x):
 def collided_done(py_measurements):
     m = py_measurements
     collided = (m["collision_vehicles"] > 0 or m["collision_pedestrians"] > 0
-                or m["collision_other"] > 0)
-    return bool(collided or m["total_reward"] < -100)
+                or m["collision_other"] > 0 or m["intersection_offroad"] > 0)
+    return bool(collided or m["total_reward"] < -80)
 
 
 if __name__ == "__main__":
