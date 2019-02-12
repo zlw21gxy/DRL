@@ -87,8 +87,8 @@ ENV_CONFIG = {
     "framestack": 2,  # note: only [1, 2] currently supported
     "early_terminate_on_collision": True,
     "reward_function": "lane_keep",
-    "render_x_res": 160,
-    "render_y_res": 80,
+    "render_x_res": 320,
+    "render_y_res": 160,
     "x_res": 100,  # cv2.resize()
     "y_res": 100,  # cv2.resize()
     "server_map": "/Game/Maps/Town02",
