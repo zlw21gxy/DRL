@@ -114,6 +114,7 @@ TOWN2_ONE_CURVE = [
     for (start, end) in POSES_TOWN2_ONE_CURVE
 ]
 
+
 TOWN2_NAVIGATION = [
     build_scenario("Town02", start, end, 0, 0, 900, TRAIN_WEATHERS)
     for (start, end) in POSES_TOWN2_NAV

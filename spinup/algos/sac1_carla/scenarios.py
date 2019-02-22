@@ -110,7 +110,12 @@ TOWN2_STRAIGHT_DYNAMIC = [
 ]
 
 TOWN2_ONE_CURVE = [
-    build_scenario("Town02", start, end, 0, 0, 1000, [0])
+    build_scenario("Town02", start, end, 0, 0, 1000, TRAIN_WEATHERS)
+    for (start, end) in POSES_TOWN2_ONE_CURVE
+]
+
+TOWN2_ONE_CURVE_CUSTOM = [
+    build_scenario("Town02", start, end, 50, 50, 1000, [0])
     for (start, end) in POSES_TOWN2_ONE_CURVE
 ]
 

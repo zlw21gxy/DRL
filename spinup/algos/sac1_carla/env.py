@@ -25,7 +25,7 @@ except Exception:
 import gym
 from gym.spaces import Box, Discrete, Tuple
 
-from scenarios import DEFAULT_SCENARIO, LANE_KEEP, TOWN2_ALL, TOWN2_ONE_CURVE
+from scenarios import DEFAULT_SCENARIO, LANE_KEEP, TOWN2_ONE_CURVE, TOWN2_ONE_CURVE_CUSTOM
 
 # Set this where you want to save image outputs (or empty string to disable)
 CARLA_OUT_PATH = os.environ.get("CARLA_OUT", os.path.expanduser("~/carla_out"))
@@ -86,13 +86,13 @@ ENV_CONFIG = {
     "enable_planner": True,
     "framestack": 1,  # note: only [1, 2] currently supported
     "early_terminate_on_collision": True,
-    "reward_function": "lane_keep",
+    "reward_function": "custom",
     "render_x_res": 1800,
     "render_y_res": 600,
     "x_res": 100,  # cv2.resize()
     "y_res": 100,  # cv2.resize()
     "server_map": "/Game/Maps/Town02",
-    "scenarios": TOWN2_ONE_CURVE,  # [DEFAULT_SCENARIO], # TOWN2_ONE_CURVE, #    TOWN2_ALL, # [LANE_KEEP]
+    "scenarios": TOWN2_ONE_CURVE_CUSTOM, # TOWN2_ONE_CURVE,  # [DEFAULT_SCENARIO], # TOWN2_ONE_CURVE, #    TOWN2_ALL, # [LANE_KEEP]
     "use_depth_camera": False,  # use depth instead of rgb.
     "discrete_actions": False,
     "squash_action_logits": False,
@@ -200,7 +200,7 @@ class CarlaEnv(gym.Env):
     def init_server(self):
         print("Initializing new Carla server...")
         # Create a new server process and start the client.
-        self.server_port = random.randint(10000, 60000)
+        self.server_port = random.randint(1000, 60000)
         self.server_process = subprocess.Popen(
             [
                 SERVER_BINARY, self.config["server_map"], "-windowed",
@@ -705,15 +705,17 @@ def compute_reward_custom(env, prev, current):
         current["collision_vehicles"] + current["collision_pedestrians"] +
         current["collision_other"] - prev["collision_vehicles"] -
         prev["collision_pedestrians"] - prev["collision_other"])
+    # print(current["collision_other"], current["collision_vehicles"], current["collision_pedestrians"])
+    # 0.0 41168.109375 0.0
     if new_damage:
         reward -= 100.0
 
     # Sidewalk intersection
-    reward -= current["intersection_offroad"]
+    reward -= 10 * current["intersection_offroad"]    # [0, 1]
 
     # Opposite lane intersection
-    reward -= current["intersection_otherlane"]
-
+    reward -= 3 * current["intersection_otherlane"]  # [0, 1]
+    # print(current["intersection_offroad"], current["intersection_otherlane"])
     # Reached goal
     if current["next_command"] == "REACH_GOAL":
         reward += 100.0
@@ -791,7 +793,7 @@ if __name__ == "__main__":
     for _ in range(2):
         env = CarlaEnv()
         obs = env.reset()
-        print("reset", obs)
+        print("reset", obs.shape)
         start = time.time()
         done = False
         i = 0
@@ -799,9 +801,9 @@ if __name__ == "__main__":
         while not done:
             i += 1
             if ENV_CONFIG["discrete_actions"]:
-                obs, reward, done, info = env.step(3)
+                obs, reward, done, info = env.step(1)
             else:
-                obs, reward, done, info = env.step([1, 1])
+                obs, reward, done, info = env.step([1, 0])
             total_reward += reward
-            print(i, "rew", reward, "total", total_reward, "done", done)
+           # print(i, "rew", reward, "total", total_reward, "done", done)
         print("{} fps".format(i / (time.time() - start)))

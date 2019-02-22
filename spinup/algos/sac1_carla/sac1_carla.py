@@ -55,9 +55,9 @@ Soft Actor-Critic
 
 """
 def sac1_carla(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
-        steps_per_epoch=3000, epochs=20000, replay_size=int(3e5), gamma=0.99,
-        polyak=0.995, lr=1e-3, alpha=0.2, batch_size=100, start_steps=9000,
-        max_ep_len=600, logger_kwargs=dict(), save_freq=100):
+        steps_per_epoch=300, epochs=20000, replay_size=int(1e4), gamma=0.99,
+        polyak=0.995, lr=1e-3, alpha=0.2, batch_size=100, start_steps=0,
+        max_ep_len=60, logger_kwargs=dict(), save_freq=100):
     """
 
     Args:
@@ -169,7 +169,7 @@ def sac1_carla(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), see
         _, _, logp_pi_, _, _,q1_pi_, q2_pi_= actor_critic(False, x2_ph, a_ph, **ac_kwargs)
 
     # Experience buffer
-    replay_buffer = ReplayBuffer(obs_dim=list(obs_dim), act_dim=list(act_dim), size=replay_size)
+    replay_buffer = ReplaqyBuffer(obs_dim=list(obs_dim), act_dim=list(act_dim), size=replay_size)
 
     # Count variables
     var_counts = tuple(core.count_vars(scope) for scope in 

@@ -81,7 +81,7 @@ def cnn_layer(x, is_train):
     conv3 = tf.layers.batch_normalization(conv3, training=is_train)
     # pool3 = tf.layers.max_pooling2d(inputs=conv3, pool_size=[2, 2], strides=2)
     pool3 = conv3
-    print(pool3)
+    # print(pool3)
     # Dense Layer
 
     x = tf.layers.flatten(pool3)
