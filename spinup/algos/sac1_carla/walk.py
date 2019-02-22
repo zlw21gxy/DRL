@@ -387,6 +387,7 @@ if __name__ == '__main__':
     logger_kwargs = setup_logger_kwargs(args.exp_name, args.seed)
 
   #  from .envs.carla.env import CarlaEnv
+    from dm_control import suit
     from env import CarlaEnv
     make_carla = lambda: CarlaEnv()
     env_fn = make_carla if args.env=='Carla-v0' else lambda : gym.make(args.env)
