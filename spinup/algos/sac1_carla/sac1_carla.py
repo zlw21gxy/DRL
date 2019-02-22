@@ -3,11 +3,11 @@ import tensorflow as tf
 from numbers import Number
 import gym
 import time
-# from spinup.algos.sac1_carla import core
-# from spinup.algos.sac1_carla.core import get_vars
-# from .spinup.utils.logx import EpochLogger
-from logx import EpochLogger
-import core
+from spinup.algos.sac1_carla import core
+from spinup.algos.sac1_carla.core import get_vars
+from spinup.utils.logx import EpochLogger
+#from logx import EpochLogger
+#import core
 from core import get_vars
 #from .utils.logx import EpochLogger
 
@@ -55,7 +55,7 @@ Soft Actor-Critic
 
 """
 def sac1_carla(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
-        steps_per_epoch=3000, epochs=100, replay_size=int(3e5), gamma=0.99,
+        steps_per_epoch=3000, epochs=100, replay_size=int(1e4), gamma=0.99,
         polyak=0.995, lr=1e-3, alpha=0.2, batch_size=100, start_steps=9000,
         max_ep_len=600, logger_kwargs=dict(), save_freq=1):
     """
