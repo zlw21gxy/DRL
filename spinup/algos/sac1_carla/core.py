@@ -28,6 +28,7 @@ def placeholders_from_space(*args):
 def mlp(x, hidden_sizes=(32,), activation=tf.tanh, output_activation=None):
     for h in hidden_sizes[:-1]:
         x = tf.layers.dense(x, units=h, activation=activation)
+        # x = tf.layers.batch_normalization(x, training=is_train)
     return tf.layers.dense(x, units=hidden_sizes[-1], activation=output_activation)
 
 # def cnn_layer(x):
@@ -45,25 +46,26 @@ def mlp(x, hidden_sizes=(32,), activation=tf.tanh, output_activation=None):
 
 def cnn_layer(x, is_train):
     # Input Layer
-    input_layer = tf.reshape(x, [-1, 100, 100, 2])
+    input_layer = tf.reshape(x, [-1, 100, 100, 6])
 
     # Conv Layer #1
     conv1 = tf.layers.conv2d(
         inputs=input_layer,
-        filters=32,
-        kernel_size=[3, 3],
-        padding="same",
+        filters=24,
+        kernel_size=[5, 5],
+        padding="VALID",
+        strides=(2, 2),
         activation=tf.nn.relu)
     conv1_bn = tf.layers.batch_normalization(conv1, training=is_train)
-    pool1 = tf.layers.max_pooling2d(inputs=conv1_bn, pool_size=[2, 2], strides=2)
-
+    # pool1 = tf.layers.max_pooling2d(inputs=conv1_bn, pool_size=[2, 2], strides=2)
+    pool1 = conv1_bn
     # Conv Layer #2
     conv2 = tf.layers.conv2d(
         inputs=pool1,
-        filters=64,
+        filters=32,
         kernel_size=[3, 3],
         strides=(2, 2),
-        padding="same",
+        padding="VALID",
         activation=tf.nn.relu)
     conv2 = tf.layers.batch_normalization(conv2, training=is_train)
     pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[2, 2], strides=2)
@@ -71,17 +73,19 @@ def cnn_layer(x, is_train):
     # Conv Layer #3
     conv3 = tf.layers.conv2d(
         inputs=pool2,
-        filters=128,
+        filters=64,
         kernel_size=[3, 3],
-        strides=(1, 1),
-        padding="same",
+        strides=(2, 2),
+        padding="VALID",
         activation=tf.nn.relu)
     conv3 = tf.layers.batch_normalization(conv3, training=is_train)
-    pool3 = tf.layers.max_pooling2d(inputs=conv3, pool_size=[2, 2], strides=2)
+    # pool3 = tf.layers.max_pooling2d(inputs=conv3, pool_size=[2, 2], strides=2)
+    pool3 = conv3
+    print(pool3)
     # Dense Layer
 
     x = tf.layers.flatten(pool3)
-    #x = tf.layers.dense(x, 512, activation=tf.nn.relu)
+    x = tf.layers.dense(x, 1024, activation=tf.nn.relu)
     return tf.layers.dense(x, 500, activation=tf.nn.relu)
 
 

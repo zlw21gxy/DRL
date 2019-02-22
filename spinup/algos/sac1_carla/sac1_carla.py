@@ -55,9 +55,9 @@ Soft Actor-Critic
 
 """
 def sac1_carla(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
-        steps_per_epoch=3000, epochs=100, replay_size=int(1e4), gamma=0.99,
+        steps_per_epoch=3000, epochs=20000, replay_size=int(3e5), gamma=0.99,
         polyak=0.995, lr=1e-3, alpha=0.2, batch_size=100, start_steps=9000,
-        max_ep_len=600, logger_kwargs=dict(), save_freq=1):
+        max_ep_len=600, logger_kwargs=dict(), save_freq=100):
     """
 
     Args:
@@ -377,10 +377,10 @@ if __name__ == '__main__':
     parser.add_argument('--l', type=int, default=1)
     parser.add_argument('--gamma', type=float, default=0.99)
     parser.add_argument('--seed', '-s', type=int, default=0)
-    parser.add_argument('--epochs', type=int, default=2000)
+    parser.add_argument('--epochs', type=int, default=20000)
     parser.add_argument('--steps_per_epoch', type=int, default=3000)
     parser.add_argument('--alpha', default=0.2, help="alpha can be either 'auto' or float(e.g:0.2).")
-    parser.add_argument('--exp_name', type=str, default='sac1_carla_benchnorm_0.2')
+    parser.add_argument('--exp_name', type=str, default='sac1_carla_encode_measurement_big')
     args = parser.parse_args()
 
     from spinup.utils.run_utils import setup_logger_kwargs

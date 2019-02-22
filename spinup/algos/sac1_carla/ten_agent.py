@@ -54,9 +54,3 @@ while not done:
     obs, rew, done, info = env.step(0.5*np.array(act))
     num = COMMAND_ORDINAL[info['next_command']]
     t += 1
-
-
-from matplotlib import pyplot as plt
-plt.imshow(obs[:, :, 1], interpolation='nearest')
-plt.show()
-

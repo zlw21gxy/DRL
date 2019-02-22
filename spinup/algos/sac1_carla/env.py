@@ -87,8 +87,8 @@ ENV_CONFIG = {
     "framestack": 1,  # note: only [1, 2] currently supported
     "early_terminate_on_collision": True,
     "reward_function": "lane_keep",
-    "render_x_res": 600,
-    "render_y_res": 200,
+    "render_x_res": 1800,
+    "render_y_res": 600,
     "x_res": 100,  # cv2.resize()
     "y_res": 100,  # cv2.resize()
     "server_map": "/Game/Maps/Town02",
@@ -332,7 +332,7 @@ class CarlaEnv(gym.Env):
         self.prev_measurement = py_measurements
         return self.encode_obs(self.preprocess_image(image), py_measurements)
 
-
+    # rgb depth forward_speed next_comment
     def encode_obs(self, image, py_measurements):
         assert self.config["framestack"] in [1, 2]
         prev_image = self.prev_image
@@ -342,7 +342,10 @@ class CarlaEnv(gym.Env):
         if self.config["framestack"] == 2:
             image = np.concatenate([prev_image, image], axis=2)
         if self.config["encode_measurement"]:
-            pass
+            image = np.concatenate([image, (np.zeros((image.shape[0], image.shape[1], 1))+py_measurements["forward_speed"]-15)/15],
+                                   axis=2)
+            image = np.concatenate([image, (np.zeros((image.shape[0], image.shape[1], 1))+COMMAND_ORDINAL[py_measurements["next_command"]]-2)/2],
+                                   axis=2)
 
         obs = image
         self.last_obs = obs
