@@ -3,10 +3,12 @@ import tensorflow as tf
 from numbers import Number
 import gym
 import time
-from spinup.algos.sac1 import core
-from spinup.algos.sac1.core import get_vars
-from spinup.utils.logx import EpochLogger
-
+#from spinup.algos.sac1 import core
+#from spinup.algos.sac1.core import get_vars
+#from spinup.utils.logx import EpochLogger
+from logx import EpochLogger
+import core
+from core import get_vars
 
 class ReplayBuffer:
     """
@@ -46,9 +48,9 @@ Soft Actor-Critic
 
 """
 def sac1(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
-        steps_per_epoch=5000, epochs=100, replay_size=int(1e6), gamma=0.99, 
+        steps_per_epoch=5000, epochs=1000000, replay_size=int(1e6), gamma=0.99, 
         polyak=0.995, lr=1e-3, alpha=0.2, batch_size=100, start_steps=10000,
-        max_ep_len=1000, logger_kwargs=dict(), save_freq=1):
+        max_ep_len=3000, logger_kwargs=dict(), save_freq=1):
     """
 
     Args:
@@ -135,7 +137,12 @@ def sac1(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
     np.random.seed(seed)
 
     env, test_env = env_fn(), env_fn()
-    obs_dim = env.observation_space.shape[0]
+    # obs_dim = env.observation_space.shape[0]
+    from gym import spaces
+    # observation_space = spaces.Box(-np.inf, np.inf, shape=(5,), dtype=np.float32)
+    observation_space = spaces.Box(-np.inf, np.inf, shape=(17,), dtype=np.float32)
+    obs_dim = observation_space.shape[0]
+
     act_dim = env.action_space.shape[0]
 
     # Action limit for clamping: critically, assumes all dimensions share the same bound!
@@ -230,6 +237,12 @@ def sac1(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
     logger.setup_tf_saver(sess, inputs={'x': x_ph, 'a': a_ph}, 
                                 outputs={'mu': mu, 'pi': pi, 'q1': q1, 'q2': q2})
 
+    def change_obs(obs):
+        obs_2 = []
+        for i in obs.keys():
+            obs_2 += list(obs[i])
+        return np.array(obs_2)
+
     def get_action(o, deterministic=False):
         act_op = mu if deterministic else pi
         return sess.run(act_op, feed_dict={x_ph: o.reshape(1,-1)})[0]
@@ -238,15 +251,18 @@ def sac1(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
         global sess, mu, pi, q1, q2, q1_pi, q2_pi
         for j in range(n):
             o, r, d, ep_ret, ep_len = test_env.reset(), 0, False, 0, 0
+            o = change_obs(o) 
             while not(d or (ep_len == max_ep_len)):
                 # Take deterministic actions at test time 
                 o, r, d, _ = test_env.step(get_action(o, True))
+                o = change_obs(o)
                 ep_ret += r
                 ep_len += 1
             logger.store(TestEpRet=ep_ret, TestEpLen=ep_len)
 
     start_time = time.time()
     o, r, d, ep_ret, ep_len = env.reset(), 0, False, 0, 0
+    o = change_obs(o)
     total_steps = steps_per_epoch * epochs
 
     # Main loop: collect experience in env and update/log each epoch
@@ -264,6 +280,9 @@ def sac1(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
 
         # Step the env
         o2, r, d, _ = env.step(a)
+        # print(o2)
+        o2 = change_obs(o2)
+        # print(o2)
         ep_ret += r
         ep_len += 1
 
@@ -273,6 +292,8 @@ def sac1(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
         d = False if ep_len==max_ep_len else d
 
         # Store experience to replay buffer
+        # print(o)
+        # print(o2)
         replay_buffer.store(o, a, r, o2, d)
 
         # Super critical, easy to overlook step: make sure to update 
@@ -302,6 +323,7 @@ def sac1(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
 
             logger.store(EpRet=ep_ret, EpLen=ep_len)
             o, r, d, ep_ret, ep_len = env.reset(), 0, False, 0, 0
+            o = change_obs(o)
 
 
         # End of epoch wrap-up
@@ -338,20 +360,25 @@ def sac1(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--env', type=str, default='MountainCarContinuous-v0')
+    parser.add_argument('--env', type=str, default='cheetah-v0')
     parser.add_argument('--hid', type=int, default=300)
     parser.add_argument('--l', type=int, default=1)
     parser.add_argument('--gamma', type=float, default=0.99)
     parser.add_argument('--seed', '-s', type=int, default=0)
-    parser.add_argument('--epochs', type=int, default=1000)
+    parser.add_argument('--epochs', type=int, default=100000000000)
     parser.add_argument('--alpha', default=0.2, help="alpha can be either 'auto' or float(e.g:0.2).")
-    parser.add_argument('--exp_name', type=str, default='MountainCarContinuous-v0')
+    parser.add_argument('--exp_name', type=str, default='cheetah2')
     args = parser.parse_args()
 
     from spinup.utils.run_utils import setup_logger_kwargs
     logger_kwargs = setup_logger_kwargs(args.exp_name, args.seed)
-
-    sac1(lambda : gym.make(args.env), actor_critic=core.mlp_actor_critic,
+    from dm_control import suite
+    from wrappers import DeepMindWrapper
+    # env = suite.load(domain_name="cartpole", task_name="balance")
+    env = suite.load(domain_name="cheetah", task_name="run")
+    env = DeepMindWrapper(env)
+    awesome_env = lambda: env
+    sac1(awesome_env, actor_critic=core.mlp_actor_critic,
         #ac_kwargs=dict(hidden_sizes=[args.hid]*args.l),
         gamma=args.gamma, seed=args.seed, epochs=args.epochs, alpha=args.alpha,
         logger_kwargs=logger_kwargs)
