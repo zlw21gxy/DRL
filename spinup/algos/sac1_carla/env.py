@@ -84,18 +84,19 @@ ENV_CONFIG = {
     "verbose": False,    # print measurement information; write out measurement json file.
 
     "enable_planner": True,
-    "framestack": 2,  # note: only [1, 2] currently supported
+    "framestack": 1,  # note: only [1, 2] currently supported
     "early_terminate_on_collision": True,
     "reward_function": "lane_keep",
-    "render_x_res": 400,
+    "render_x_res": 600,
     "render_y_res": 200,
     "x_res": 100,  # cv2.resize()
     "y_res": 100,  # cv2.resize()
     "server_map": "/Game/Maps/Town02",
-    "scenarios": [LANE_KEEP],  # [DEFAULT_SCENARIO], # TOWN2_ONE_CURVE, #    TOWN2_ALL, #
-    "use_depth_camera": True,  # use depth instead of rgb.
+    "scenarios": TOWN2_ONE_CURVE,  # [DEFAULT_SCENARIO], # TOWN2_ONE_CURVE, #    TOWN2_ALL, # [LANE_KEEP]
+    "use_depth_camera": False,  # use depth instead of rgb.
     "discrete_actions": False,
     "squash_action_logits": False,
+    "encode_measurement": True
 }
 
 DISCRETE_ACTIONS = {
@@ -158,6 +159,14 @@ class CarlaEnv(gym.Env):
                 shape=(config["y_res"], config["x_res"],
                        3 * config["framestack"]),
                 dtype=np.uint8)
+        # encode_measure ---> rgb + depth + current_speed + next_commend
+        # 3 + 1 + 1 + 1 = 6
+        if config["encode_measurement"]:
+            image_space = Box(
+                0,
+                255,
+                shape=(config["y_res"], config["x_res"], 6),
+                dtype=np.float32)
 
         # The Observation Space
         self.observation_space = Tuple(
@@ -276,6 +285,16 @@ class CarlaEnv(gym.Env):
 
             settings.add_sensor(camera1)
 
+        if self.config["encode_measurement"]:
+            camera1 = Camera("CameraDepth", PostProcessing="Depth")
+            camera1.set_image_size(self.config["render_x_res"],
+                                   self.config["render_y_res"])
+            # camera1.set_position(30, 0, 130)
+            camera1.set_position(0.5, 0.0, 1.6)
+            # camera1.set_rotation(0.0, 0.0, 0.0)
+
+            settings.add_sensor(camera1)
+
         camera2 = Camera("CameraRGB")
         camera2.set_image_size(self.config["render_x_res"],
                                self.config["render_y_res"])
@@ -313,6 +332,7 @@ class CarlaEnv(gym.Env):
         self.prev_measurement = py_measurements
         return self.encode_obs(self.preprocess_image(image), py_measurements)
 
+
     def encode_obs(self, image, py_measurements):
         assert self.config["framestack"] in [1, 2]
         prev_image = self.prev_image
@@ -320,16 +340,73 @@ class CarlaEnv(gym.Env):
         if prev_image is None:
             prev_image = image
         if self.config["framestack"] == 2:
-            # image = np.concatenate([prev_image, image], axis=2)
-            '''this works when use depth camera and frame 2'''
-            image = np.concatenate([image, np.zeros_like(image)+py_measurements["forward_speed"]/30], axis=2)
-        # obs = (image, COMMAND_ORDINAL[py_measurements["next_command"]], [
-        #     py_measurements["forward_speed"],
-        #     py_measurements["distance_to_goal"]
-        # ])
-        obs = image    # can we encode speed into imagine
+            image = np.concatenate([prev_image, image], axis=2)
+        if self.config["encode_measurement"]:
+            pass
+
+        obs = image
         self.last_obs = obs
         return obs
+
+    # def encode_obs(self, image, py_measurements):
+    #     assert self.config["framestack"] in [1, 2]
+    #     prev_image = self.prev_image
+    #     self.prev_image = image
+    #     if prev_image is None:
+    #         prev_image = image
+    #     if self.config["framestack"] == 2:
+    #         # image = np.concatenate([prev_image, image], axis=2)
+    #         '''this works when use depth camera and frame 2'''
+    #         image = np.concatenate([image, np.zeros_like(image)+py_measurements["forward_speed"]/30], axis=2)
+    #     # obs = (image, COMMAND_ORDINAL[py_measurements["next_command"]], [
+    #     #     py_measurements["forward_speed"],
+    #     #     py_measurements["distance_to_goal"]
+    #     # ])
+    #     obs = image    # can we encode speed into imagine
+    #     self.last_obs = obs
+    #     return obs
+
+##############TODO:example of py_measurement
+    # {'episode_id': '2019-02-22_11-26-36_990083',
+    #  'step': 0,
+    #  'x': 71.53003692626953,
+    #  'y': 302.57000732421875,
+    #  'x_orient': -1.0,
+    #  'y_orient': -6.4373016357421875e-06,
+    #  'forward_speed': -3.7578740032934155e-13,
+    #  'distance_to_goal': 0.6572,
+    #  'distance_to_goal_euclidean': 0.6200001239776611,
+    #  'collision_vehicles': 0.0,
+    #  'collision_pedestrians': 0.0,
+    #  'collision_other': 0.0,
+    #  'intersection_offroad': 0.0,
+    #  'intersection_otherlane': 0.0,
+    #  'weather': 0,
+    #  'map': '/Game/Maps/Town02',
+    #  'start_coord': [0.0, 3.0],
+    #  'end_coord': [0.0, 3.0],
+    #  'current_scenario': {'city': 'Town02',
+    #                       'num_vehicles': 0,
+    #                       'num_pedestrians': 20,
+    #                       'weather_distribution': [0],
+    #                       'start_pos_id': 36,
+    #                       'end_pos_id': 40,
+    #                       'max_steps': 600},
+    #  'x_res': 10,
+    #  'y_res': 10,
+    #  'num_vehicles': 0,
+    #  'num_pedestrians': 20,
+    #  'max_steps': 600,
+    #  'next_command': 'GO_STRAIGHT',
+    #  'action': (0, 1),
+    #  'control': {'steer': 1.0,
+    #              'throttle': 0.0,
+    #              'brake': 0.0,
+    #              'reverse': False,
+    #              'hand_brake': False},
+    #  'reward': 0.0,
+    #  'total_reward': 0.0,
+    #  'done': False}
 
     def step(self, action):
         try:
@@ -448,6 +525,18 @@ class CarlaEnv(gym.Env):
                 data, (self.config["x_res"], self.config["y_res"]),
                 interpolation=cv2.INTER_AREA)
             data = np.expand_dims(data, 2)
+        elif self.config["encode_measurement"]:
+            # data = (image - 0.5) * 2
+            data = image.reshape(self.config["render_y_res"],
+                                self.config["render_x_res"], -1)
+            data[:, :, 3] = (data[:, :, 0] - 0.5) * 2
+            data[:, :, 0:2] = (data[:, :, 0:2].astype(np.float32) - 128) / 128
+            data = cv2.resize(
+                data, (self.config["x_res"], self.config["y_res"]),
+                interpolation=cv2.INTER_AREA)
+
+
+
         else:
             data = image.data.reshape(self.config["render_y_res"],
                                       self.config["render_x_res"], 3)
@@ -466,13 +555,20 @@ class CarlaEnv(gym.Env):
             print_measurements(measurements)
 
         observation = None
-        if self.config["use_depth_camera"]:
-            camera_name = "CameraDepth"
+        if self.config["encode_measurement"]:
+            # print(sensor_data["CameraRGB"].data.shape, sensor_data["CameraDepth"].data.shape)
+            observation = np.concatenate((sensor_data["CameraRGB"].data,
+                                          sensor_data["CameraDepth"].data[:, :, np.newaxis]),
+                                         axis=2)
         else:
-            camera_name = "CameraRGB"
-        for name, image in sensor_data.items():
-            if name == camera_name:
-                observation = image
+            if self.config["use_depth_camera"]:
+                camera_name = "CameraDepth"
+
+            else:
+                camera_name = "CameraRGB"
+            for name, image in sensor_data.items():
+                if name == camera_name:
+                    observation = image
 
         cur = measurements.player_measurements
 
